@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>삼수선 정리 3D 뷰어</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #f0f0f0; }
+        #info {
+            position: absolute;
+            top: 10px; left: 10px;
+            font-family: sans-serif;
+            background: rgba(255,255,255,0.8);
+            padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .legend { display: flex; align-items: center; margin-bottom: 5px; }
+        .color-box { width: 15px; height: 15px; margin-right: 10px; border-radius: 3px; }
+    </style>
+    <!-- Three.js 및 OrbitControls CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <div id="info">
+        <h3>삼수선 정리 (마우스 드래그로 회전)</h3>
+        <div class="legend"><div class="color-box" style="background:#0000ff;"></div> 직선 l (평면 위의 직선)</div>
+        <div class="legend"><div class="color-box" style="background:#ff0000;"></div> 선분 PO (평면에 대한 수선)</div>
+        <div class="legend"><div class="color-box" style="background:#00ff00;"></div> 선분 OH (직선 l에 대한 수선)</div>
+        <div class="legend"><div class="color-box" style="background:#ffaa00;"></div> 선분 PH (결과적으로 도출되는 수선)</div>
+    </div>
+
+    <script>
+        // 1. 씬, 카메라, 렌더러 초기화
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(12, 10, 15);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 마우스 컨트롤 추가
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // 2. 기준 평면 (알파)
+        const gridHelper = new THREE.GridHelper(20, 20, 0x888888, 0xcccccc);
+        scene.add(gridHelper);
+
+        // 3. 주요 좌표 설정
+        const O = new THREE.Vector3(0, 0, 0);     // 평면 위의 수선의 발
+        const P = new THREE.Vector3(0, 6, 0);     // 평면 밖의 점
+        const H = new THREE.Vector3(5, 0, 0);     // 직선 l 위의 점
+        const L1 = new THREE.Vector3(5, 0, -8);   // 직선 l 끝점 1
+        const L2 = new THREE.Vector3(5, 0, 8);    // 직선 l 끝점 2
+
+        // 선분 생성 헬퍼 함수
+        function createLine(v1, v2, color, dashed = false) {
+            const material = dashed 
+                ? new THREE.LineDashedMaterial({ color: color, dashSize: 0.5, gapSize: 0.2, linewidth: 2 })
+                : new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
+            const geometry = new THREE.BufferGeometry().setFromPoints([v1, v2]);
+            const line = new THREE.Line(geometry, material);
+            if (dashed) line.computeLineDistances();
+            return line;
+        }
+
+        // 구(점) 생성 헬퍼 함수
+        function createPoint(position, color) {
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.2), 
+                new THREE.MeshBasicMaterial({ color: color })
+            );
+            mesh.position.copy(position);
+            return mesh;
+        }
+
+        // 4. 도형 렌더링
+        scene.add(createLine(L1, L2, 0x0000ff)); // 직선 l
+        scene.add(createLine(P, O, 0xff0000));   // 수선 PO
+        scene.add(createLine(O, H, 0x00ff00));   // 수선 OH
+        scene.add(createLine(P, H, 0xffaa00, true)); // 선분 PH (점선)
+
+        scene.add(createPoint(P, 0xff0000));
+        scene.add(createPoint(O, 0xff0000));
+        scene.add(createPoint(H, 0x00ff00));
+
+        // 5. 애니메이션 루프
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 화면 크기 변경 대응
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
