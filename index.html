@@ -1,104 +1,100 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>삼수선 정리 3D 뷰어</title>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #f0f0f0; }
-        #info {
-            position: absolute;
-            top: 10px; left: 10px;
-            font-family: sans-serif;
-            background: rgba(255,255,255,0.8);
-            padding: 15px; border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .legend { display: flex; align-items: center; margin-bottom: 5px; }
-        .color-box { width: 15px; height: 15px; margin-right: 10px; border-radius: 3px; }
-    </style>
-    <!-- Three.js 및 OrbitControls CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<meta charset="UTF-8">
+<title>수능 기하 자작 문항 도형</title>
+<style>
+    body { margin: 0; display: flex; justify-content: center; align-items: center; background: #f0f2f5; height: 100vh; }
+    canvas { background: #fff; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border: 1px solid #d1d5db; border-radius: 8px; }
+</style>
 </head>
 <body>
-    <div id="info">
-        <h3>삼수선 정리 (마우스 드래그로 회전)</h3>
-        <div class="legend"><div class="color-box" style="background:#0000ff;"></div> 직선 l (평면 위의 직선)</div>
-        <div class="legend"><div class="color-box" style="background:#ff0000;"></div> 선분 PO (평면에 대한 수선)</div>
-        <div class="legend"><div class="color-box" style="background:#00ff00;"></div> 선분 OH (직선 l에 대한 수선)</div>
-        <div class="legend"><div class="color-box" style="background:#ffaa00;"></div> 선분 PH (결과적으로 도출되는 수선)</div>
-    </div>
+<canvas id="csatGeometry" width="700" height="500"></canvas>
+<script>
+    const canvas = document.getElementById('csatGeometry');
+    const ctx = canvas.getContext('2d');
+    const scale = 25; // 1단위 = 25px
+    const cx = 350;
+    const cy = 250;
 
-    <script>
-        // 1. 씬, 카메라, 렌더러 초기화
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(12, 10, 15);
-        
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+    const toX = x => cx + x * scale;
+    const toY = y => cy - y * scale;
 
-        // 마우스 컨트롤 추가
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
+    // x축, y축 그리기
+    ctx.beginPath();
+    ctx.moveTo(50, cy); ctx.lineTo(650, cy);
+    ctx.moveTo(cx, 50); ctx.lineTo(cx, 450);
+    ctx.strokeStyle = '#4b5563'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.font = 'italic 16px serif'; ctx.fillStyle = '#000';
+    ctx.fillText('x', 635, cy + 20);
+    ctx.fillText('y', cx + 10, 60);
+    ctx.fillText('O', cx - 20, cy + 20);
 
-        // 2. 기준 평면 (알파)
-        const gridHelper = new THREE.GridHelper(20, 20, 0x888888, 0xcccccc);
-        scene.add(gridHelper);
+    // 타원 (a=5, b=4)
+    ctx.beginPath(); 
+    ctx.ellipse(cx, cy, 5*scale, 4*scale, 0, 0, 2*Math.PI);
+    ctx.strokeStyle = '#111827'; ctx.lineWidth = 1.5; ctx.stroke();
 
-        // 3. 주요 좌표 설정
-        const O = new THREE.Vector3(0, 0, 0);     // 평면 위의 수선의 발
-        const P = new THREE.Vector3(0, 6, 0);     // 평면 밖의 점
-        const H = new THREE.Vector3(5, 0, 0);     // 직선 l 위의 점
-        const L1 = new THREE.Vector3(5, 0, -8);   // 직선 l 끝점 1
-        const L2 = new THREE.Vector3(5, 0, 8);    // 직선 l 끝점 2
+    // 쌍곡선 (p=2, q=sqrt(5))
+    ctx.beginPath();
+    for(let y=-7; y<=7; y+=0.1) {
+        let x = 2 * Math.sqrt(1 + (y*y)/5);
+        if(y===-7) ctx.moveTo(toX(x), toY(y)); else ctx.lineTo(toX(x), toY(y));
+    }
+    for(let y=-7; y<=7; y+=0.1) {
+        let x = -2 * Math.sqrt(1 + (y*y)/5);
+        if(y===-7) ctx.moveTo(toX(x), toY(y)); else ctx.lineTo(toX(x), toY(y));
+    }
+    ctx.stroke();
 
-        // 선분 생성 헬퍼 함수
-        function createLine(v1, v2, color, dashed = false) {
-            const material = dashed 
-                ? new THREE.LineDashedMaterial({ color: color, dashSize: 0.5, gapSize: 0.2, linewidth: 2 })
-                : new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
-            const geometry = new THREE.BufferGeometry().setFromPoints([v1, v2]);
-            const line = new THREE.Line(geometry, material);
-            if (dashed) line.computeLineDistances();
-            return line;
-        }
+    // 포물선 (y^2=12x) - 점선으로 구분
+    ctx.beginPath();
+    for(let y=-8; y<=8; y+=0.1) {
+        let x = (y*y)/12;
+        if(y===-8) ctx.moveTo(toX(x), toY(y)); else ctx.lineTo(toX(x), toY(y));
+    }
+    ctx.setLineDash([5, 5]); ctx.strokeStyle = '#6b7280'; ctx.stroke(); ctx.setLineDash([]);
 
-        // 구(점) 생성 헬퍼 함수
-        function createPoint(position, color) {
-            const mesh = new THREE.Mesh(
-                new THREE.SphereGeometry(0.2), 
-                new THREE.MeshBasicMaterial({ color: color })
-            );
-            mesh.position.copy(position);
-            return mesh;
-        }
+    // 접점 A(3, 3.2), 접선, 법선
+    const ax = 3, ay = 3.2;
+    const qx = 25/3; // Q(25/3, 0)
+    const rx = 27/25; // R(27/25, 0)
+    
+    // 접선 l
+    ctx.beginPath(); ctx.moveTo(toX(10), toY(-3/5*10 + 5)); ctx.lineTo(toX(-1), toY(-3/5*(-1) + 5));
+    ctx.lineWidth = 1; ctx.strokeStyle = '#111827'; ctx.stroke();
+    // 법선
+    ctx.beginPath(); ctx.moveTo(toX(0.5), toY(5/3*0.5 - 9/5)); ctx.lineTo(toX(4), toY(5/3*4 - 9/5));
+    ctx.stroke();
 
-        // 4. 도형 렌더링
-        scene.add(createLine(L1, L2, 0x0000ff)); // 직선 l
-        scene.add(createLine(P, O, 0xff0000));   // 수선 PO
-        scene.add(createLine(O, H, 0x00ff00));   // 수선 OH
-        scene.add(createLine(P, H, 0xffaa00, true)); // 선분 PH (점선)
+    // 점 A, Q, R 표시
+    ctx.beginPath(); ctx.arc(toX(ax), toY(ay), 3.5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillText('A', toX(ax)+8, toY(ay)-8);
+    ctx.beginPath(); ctx.arc(toX(qx), toY(0), 3.5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillText('Q', toX(qx)-5, toY(0)+22);
+    ctx.beginPath(); ctx.arc(toX(rx), toY(0), 3.5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillText('R', toX(rx)-12, toY(0)+22);
 
-        scene.add(createPoint(P, 0xff0000));
-        scene.add(createPoint(O, 0xff0000));
-        scene.add(createPoint(H, 0x00ff00));
+    // 타원, 쌍곡선 교점 P(10/3, 4sqrt(5)/3)
+    const px = 10/3, py = (4*Math.sqrt(5))/3;
+    ctx.beginPath(); ctx.arc(toX(px), toY(py), 4, 0, 2*Math.PI); ctx.fill();
+    ctx.fillText('P', toX(px)+10, toY(py)+2);
 
-        // 5. 애니메이션 루프
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        animate();
+    // 점 P를 지나는 y축 평행선과 M, N
+    const my = Math.sqrt(40); 
+    ctx.beginPath(); ctx.moveTo(toX(px), toY(my+0.5)); ctx.lineTo(toX(px), toY(-my-0.5));
+    ctx.lineWidth = 0.8; ctx.stroke();
+    
+    ctx.beginPath(); ctx.arc(toX(px), toY(my), 3.5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillText('M', toX(px)+8, toY(my)-5);
+    ctx.beginPath(); ctx.arc(toX(px), toY(-my), 3.5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillText('N', toX(px)+8, toY(-my)+15);
 
-        // 화면 크기 변경 대응
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
+    // 초점 F(3,0), F'(-3,0)
+    ctx.beginPath(); ctx.arc(toX(3), toY(0), 3.5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillText('F', toX(3)-5, toY(0)-12);
+    ctx.beginPath(); ctx.arc(toX(-3), toY(0), 3.5, 0, 2*Math.PI); ctx.fill();
+    ctx.fillText("F'", toX(-3)-12, toY(0)-12);
+</script>
 </body>
 </html>
